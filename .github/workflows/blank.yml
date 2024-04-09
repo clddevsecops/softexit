@@ -1,0 +1,42 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Check for New Commits
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const { data: commits } = await github.rest.repos.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              since: yesterday.toISOString(),
+            });
+            if (commits.length === 0) {
+              console.log("No commits in the last 24 hours. Ending workflow execution.");
+              return; // Soft exit: Ends the script without an error.
+            }
+            // If there are commits, the rest of the script will execute.
+            console.log(`Found ${commits.length} commits in the last 24 hours:`);
+            commits.forEach(commit => {
+              console.log(`- Commit message: ${commit.commit.message}`);
+              console.log(`  Author: ${commit.commit.author.name}`);
+              console.log(`  URL: ${commit.html_url}`);
+            });
+          result-encoding: string
