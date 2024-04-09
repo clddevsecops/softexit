@@ -17,8 +17,11 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    outputs:
+      run_test_step: ${{ steps.check_commits.outputs.run_test_step }}
     steps:
       - name: Check for New Commits
+        id: check_commits
         uses: actions/github-script@v6
         with:
           script: |
@@ -30,16 +33,15 @@ jobs:
             });
             if (commits.length === 0) {
               console.log("No commits in the last 2 minutes. Ending workflow execution.");
+              core.setOutput("run_test_step", "false");
               return; // Soft exit: Ends the script without an error.
+            } else {
+              console.log(`Found ${commits.length} commits in the last 2 minutes.`);
+              core.setOutput("run_test_step", "true");
+              // Print commit details...
             }
-            // If there are commits, the rest of the script will execute.
-            console.log(`Found ${commits.length} commits in the last 2 minutes:`);
-            commits.forEach(commit => {
-              console.log(`- Commit message: ${commit.commit.message}`);
-              console.log(`  Author: ${commit.commit.author.name}`);
-              console.log(`  URL: ${commit.html_url}`);
-            });
           result-encoding: string
       
       - name: Test Step
-        run: echo "This step will only run if the previous 'Check for New Commits' step did not perform a soft exit."
+        if: steps.check_commits.outputs.run_test_step == 'true'
+        run: echo "This step will only run if the 'Check for New Commits' step found new commits."
